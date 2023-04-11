@@ -293,6 +293,8 @@ type userInfoRaw struct {
 	// https://forums.aws.amazon.com/thread.jspa?messageID=949441&#949441 and
 	// https://discuss.elastic.co/t/openid-error-after-authenticating-against-aws-cognito/206018/11
 	EmailVerified stringAsBool `json:"email_verified"`
+	UniqueName    string       `json:"unique_name"`
+	Upn           string       `json:"upn"`
 }
 
 // Claims unmarshals the raw JSON object claims into the provided object.
@@ -347,6 +349,15 @@ func (p *Provider) UserInfo(ctx context.Context, tokenSource oauth2.TokenSource)
 	if err := json.Unmarshal(body, &userInfo); err != nil {
 		return nil, fmt.Errorf("oidc: failed to decode userinfo: %v", err)
 	}
+
+	// in AzureAD, email is an additional claim
+	// that requires an additional authorization.
+	// upn is always present and always match the AD user
+	userEmail := userInfo.Email
+	if userEmail == "" {
+		userEmail = userInfo.Upn
+	}
+
 	return &UserInfo{
 		Subject:       userInfo.Subject,
 		Profile:       userInfo.Profile,
